@@ -9,7 +9,7 @@
         <!-- Meta tag for enabling mobile web app capabilities -->
         <meta name="mobile-web-app-capable" content="yes" />
     </apex:facet>
-    <apex:includeScript value="https://maps.googleapis.com/maps/api/js?key=AIzaSyCYQgYuha5w1mBAx_hlkJYNROLvyi7jVtg&libraries=places&callback=initMap" />
+    <apex:includeScript value="https://maps.googleapis.com/maps/api/js?key=*************************&libraries=places&callback=initMap" />
     <apex:includeScript value="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js" />
 
         <div id="map"></div>
