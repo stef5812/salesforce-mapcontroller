@@ -1,0 +1,897 @@
+<apex:page controller="MapController" showHeader="false" sidebar="false">
+    <!--copyright © 2024 Stefan Dodds @ stefandodds.ie, All rights reserved -->
+    <apex:includeScript value="{!$Resource.mapScript}"/> <!-- JS file static resource name -->
+    <apex:includeScript value="{!$Resource.chnScript}"/> <!-- JS file static resource name --> 
+    <apex:includeScript value="{!$Resource.medScript}"/> <!-- JS file static resource name -->    
+    <apex:includeScript value="{!$Resource.hseScript}"/> <!-- JS file static resource name --> 
+    <apex:stylesheet value="{!$Resource.mapStyle}"/> <!-- CSS file static resource name -->
+    <apex:facet name="metadata">
+        <!-- Meta tag for enabling mobile web app capabilities -->
+        <meta name="mobile-web-app-capable" content="yes" />
+    </apex:facet>
+    <apex:includeScript value="https://maps.googleapis.com/maps/api/js?key=AIzaSyCYQgYuha5w1mBAx_hlkJYNROLvyi7jVtg&libraries=places&callback=initMap" />
+    <apex:includeScript value="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js" />
+
+        <div id="map"></div>
+        
+        <!-- Combined Legend with Icons and Buttons -->
+        <div id="combinedLegend">
+
+            <!-- Marker Toggle Buttons with Icons -->
+            <div class="legend-section">
+            
+
+                <apex:form >
+                    <apex:pageBlock >
+                        <!-- onchange will trigger handleChnChange which calls toggleCHN with the selected value -->
+                        <apex:selectList id="legendChnDropdown" value="{!selectedChn}" size="1" onchange="handleChnChange(this.value)">
+                            <apex:selectOptions value="{!chnOptions}"/>
+                        </apex:selectList>
+   
+                        <!-- SC Dropdown -->
+                        <select id="scDropdown" class="legend-button" style="display:none;" onchange="handleScChange(this.value)">
+                            <option value="">Select SC</option>
+                        </select>
+                        
+                    </apex:pageBlock>
+                                        
+                </apex:form>         
+            
+                <div class="legend-item" onclick="toggleMarkers('ops')" title="OPs - Active">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/OPicon-active.png" />
+                </div>
+                <div class="legend-item" onclick="toggleMarkers('optbm')" title="OPs - Matched">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/OPicon.png" />
+                </div>
+                <div class="legend-item" onclick="toggleMarkers('optbre')" title="OPs - Re-Match">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/OPicon-re.png" />
+                </div>
+                <div class="legend-item" onclick="toggleMarkers('vola')" title="Volunteers - Active">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/VOLicon-active.png" />
+                </div>
+                <div class="legend-item" onclick="toggleMarkers('volftac')" title="Volunteers - Full-Time Active">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/VOLicon-L.png" />
+                </div>
+                <div class="legend-item" onclick="toggleMarkers('voltbm')" title="Volunteers - To Be Matched">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/VOLicon.png" />
+                </div>
+             </div>                                
+             
+             <div class="legend-section">
+                <div class="legend-item" onclick="toggleMedMarkers('primary')" title="Primary Care">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/Primary.png" />
+                </div>
+
+                <div class="legend-item" onclick="toggleMedMarkers('council')" title="Authorized Services">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/AUTHcity-icon.png" />
+                </div>
+                <div class="legend-item" onclick="toggleMedMarkers('garda')" title="Garda Stations">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/Garda247.png" />
+                </div>                
+                <div class="legend-item" onclick="toggleMedMarkers('hospitals')" title="Hospitals">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/hospital.png" />
+                </div>            
+                <div class="legend-item" onclick="toggleMedMarkers('gps')" title="GPS Locations">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/GP-icon.png" />
+                </div> 
+                <div class="legend-item" onclick="toggleMedMarkers('dentist')" title="Dentists">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/dentist.png" />
+                </div>                                
+                <div class="legend-item" onclick="toggleMedMarkers('mabs')" title="MABS">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/MABS.png" />
+                </div>                               
+                <div class="legend-item" onclick="toggleMedMarkers('frc')" title="Family Resource Centers">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/FRC.png" />
+                </div>                
+
+                <div class="legend-item" onclick="toggleMedMarkers('ncbi')" title="NCBI Services">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/NCBI.png" />
+                </div>
+                <div class="legend-item" onclick="toggleMedMarkers('chime')" title="Chime Services">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/Chime.png" />
+                </div> 
+                <div class="legend-item" onclick="toggleMedMarkers('wheel')" title="Wheelchair Access">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/wheel.png" />
+                </div>                
+                <div class="legend-item" onclick="toggleMedMarkers('alz')" title="Alzheimer's Services">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/ALZ.png" />
+                </div> 
+                
+                                            
+            </div>
+
+             <div class="legend-section">            
+                <div class="legend-item" onclick="toggleMedMarkers('nursing')" title="Nursing Homes">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/nursing.png" />
+                </div>
+                <div class="legend-item" onclick="toggleMedMarkers('mow')" title="Meals on Wheels">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/MOW.png" />
+                </div>
+                <div class="legend-item" onclick="toggleMedMarkers('health')" title="Health Services">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/health.png" />
+                </div>                                   
+                <div class="legend-item" onclick="toggleMedMarkers('phar')" title="Pharmacies">
+                    <img src="https://stefandodds.ie/serv-dir/libs/icons/phar.png" />
+                </div> 
+            </div>   
+
+        </div>        
+
+
+        <script>
+        var markerType = "";
+        
+        var opsMarkers = [];
+        var optbmMarkers = [];
+        var optbreMarkers = [];
+        var volaMarkers = [];
+        var volftacMarkers = [];
+        var voltbmMarkers = [];
+
+// Initialize the map
+            function initMap() {
+                console.log("Initializing map...");
+                
+
+                console.log("CHN Coordinates: ", chnCoordinates);      
+                          
+                map = new google.maps.Map(document.getElementById('map'), {
+                    zoom: 8,
+                    center: {lat: 51.8867, lng: -8.4088}  // Default center
+                }); 
+                
+                initMap2()
+                
+//load data                
+
+                var opsLocations = JSON.parse('{!JSENCODE(newOPACTAsJSON)}');
+                console.log("OPs Locations: ", opsLocations);
+                opsLocations.forEach(function(location) {
+                    console.log("Adding OPs marker for location: ", location);
+                    //var marker = addMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/OPicon-active.png');
+
+                    var opsMarker = addMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/OPicon-active.png', 'ops');
+                    
+                    opsMarker.setVisible(false); // Initially hide the marker
+                    opsMarkers.push(opsMarker);
+                });
+
+                // Load OPTBM locations
+                var optbmLocations = JSON.parse('{!JSENCODE(OPTBMAsJSON)}');
+                console.log("OPTBM Locations: ", optbmLocations);
+                optbmLocations.forEach(function(location) {
+                    console.log("Adding OPTBM marker for location: ", location);
+                    var optbmMarker = addMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/OPicon.png', 'optbm');
+                    optbmMarker.setVisible(false); // Initially hide the marker
+                    optbmMarkers.push(optbmMarker);
+                });
+
+                // Load OPTBRE locations
+                var optbreLocations = JSON.parse('{!JSENCODE(OPTBREAsJSON)}');
+                console.log("OPTBRE Locations: ", optbreLocations);
+                optbreLocations.forEach(function(location) {
+                    console.log("Adding OPTBRE marker for location: ", location);
+                    var optbreMarker = addMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/OPicon-re.png', 'optbre');
+                    optbreMarker.setVisible(false); // Initially hide the marker
+                    optbreMarkers.push(optbreMarker);
+                });
+
+                // Load VOLA locations
+                var volaLocations = JSON.parse('{!JSENCODE(VOLAAsJSON)}');
+                console.log("VOLA Locations: ", volaLocations);
+                volaLocations.forEach(function(location) {
+                    console.log("Adding VOLA marker for location: ", location);
+                    var volaMarker = addMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/VOLicon-active.png', 'vola');
+                    volaMarker.setVisible(false); // Initially hide the marker
+                    volaMarkers.push(volaMarker);
+                });
+
+                // Load VOLFtAc locations
+                var volftacLocations = JSON.parse('{!JSENCODE(VOLFtAcAsJSON)}');
+                console.log("VOLFtAc Locations: ", volftacLocations);
+                volftacLocations.forEach(function(location) {
+                    console.log("Adding VOLFtAc marker for location: ", location);
+                    var volftacMarker = addMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/VOLicon-L.png', 'volftac');
+                    volftacMarker.setVisible(false); // Initially hide the marker
+                    volftacMarkers.push(volftacMarker);
+                });
+
+                // Load VOLTBM locations
+                var voltbmLocations = JSON.parse('{!JSENCODE(VOLTBMAsJSON)}');
+                console.log("VOLTBM Locations: ", voltbmLocations);
+                voltbmLocations.forEach(function(location) {
+                    console.log("Adding VOLTBM marker for location: ", location);
+                    var voltbmMarker = addMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/VOLicon.png', 'voltbm');
+                    voltbmMarker.setVisible(false); // Initially hide the marker
+                    voltbmMarkers.push(voltbmMarker);
+                });
+                
+                           // Load Alzheimer's locations
+                var alzLocations = JSON.parse('{!JSENCODE(alzAsJSON)}');
+                console.log("alz Locations: ", alzLocations);
+                alzLocations.forEach(function(location) {
+                    console.log("Adding Alz marker for location: ", location);
+                    var alzMarker= addMedMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/ALZ.png', 'medical');
+                    alzMarker.setVisible(false); // Initially hide the marker
+                    alzMarkers.push(alzMarker);
+                });
+                
+                           // Load Primary Care locations
+                var primaryLocations = JSON.parse('{!JSENCODE(primaryAsJSON)}');
+                console.log("primary Locations: ", primaryLocations);
+                primaryLocations.forEach(function(location) {
+                    console.log("Adding Primary marker for location: ", location);
+                    var primaryMarker= addMedMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/Primary.png', 'medical');
+                    primaryMarker.setVisible(false); // Initially hide the marker
+                    primaryMarkers.push(primaryMarker);
+                });       
+                
+                           // Load Chime locations
+                var chimeLocations = JSON.parse('{!JSENCODE(chimeAsJSON)}');
+                console.log("Chime Locations: ", chimeLocations);
+                chimeLocations.forEach(function(location) {
+                    console.log("Adding Chime marker for location: ", location);
+                    var chimeMarker = addMedMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/Chime.png', 'medical');
+                    chimeMarker.setVisible(false); // Initially hide the marker
+                    chimeMarkers.push(chimeMarker);
+                });                          
+
+                // Load Council locations
+                var councilLocations = JSON.parse('{!JSENCODE(councilAsJSON)}');
+                console.log("Council Locations: ", councilLocations);
+                councilLocations.forEach(function(location) {
+                    console.log("Adding Council marker for location: ", location);
+                    var councilMarker= addCouncilMarker(location);  // Use the new addCouncilMarker function
+                    councilMarker.setVisible(false); // Initially hide the marker
+                    councilMarkers.push(councilMarker);
+                });
+                  
+
+
+                           // Load Hospitals locations
+                var hospitalsLocations = JSON.parse('{!JSENCODE(hospitalsAsJSON)}');
+                console.log("Hospitals Locations: ", hospitalsLocations);
+                hospitalsLocations.forEach(function(location) {
+                    console.log("Adding Hospitals marker for location: ", location);
+                    var hospitalsMarker= addMedMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/hospital.png', 'medical');
+                    hospitalsMarker.setVisible(false); // Initially hide the marker
+                    hospitalsMarkers.push(hospitalsMarker);
+                }); 
+                
+                
+                           // Load Garda locations
+                var gardaLocations = JSON.parse('{!JSENCODE(gardaAsJSON)}');
+                console.log("Garda Locations: ", gardaLocations);
+                gardaLocations.forEach(function(location) {
+                    console.log("Adding Garda marker for location: ", location);
+                    var gardaMarker= addGardaMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/Garda.png', 'medical');
+                    gardaMarker.setVisible(false); // Initially hide the marker
+                    gardaMarkers.push(gardaMarker);
+                }); 
+                                
+                           // Load Garda locations
+                var pharLocations = JSON.parse('{!JSENCODE(pharAsJSON)}');
+                console.log("Phar Locations: ", pharLocations);
+                pharLocations.forEach(function(location) {
+                    console.log("Adding Phar marker for location: ", location);
+                    var pharMarker= addMedMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/phar.png', 'medical');
+                    pharMarker.setVisible(false); // Initially hide the marker
+                    pharMarkers.push(pharMarker);
+                }); 
+                                
+                           // Load Garda locations
+                var healthLocations = JSON.parse('{!JSENCODE(healthAsJSON)}');
+                console.log("Health Locations: ", healthLocations);
+                healthLocations.forEach(function(location) {
+                    console.log("Adding Health marker for location: ", location);
+                    var healthMarker= addMedMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/health.png', 'medical');
+                    healthMarker.setVisible(false); // Initially hide the marker
+                    healthMarkers.push(healthMarker);
+                }); 
+                
+                           // Load Garda locations
+                var mowLocations = JSON.parse('{!JSENCODE(mowAsJSON)}');
+                console.log("MOW Locations: ", mowLocations);
+                mowLocations.forEach(function(location) {
+                    console.log("Adding MOW marker for location: ", location);
+                    var mowMarker= addMedMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/MOW.png', 'medical');
+                    mowMarker.setVisible(false); // Initially hide the marker
+                    mowMarkers.push(mowMarker);
+                });                  
+                
+
+                           // Load Garda locations
+                var mabsLocations = JSON.parse('{!JSENCODE(mabsAsJSON)}');
+                console.log("MABS Locations: ", mabsLocations);
+                mabsLocations.forEach(function(location) {
+                    console.log("Adding MABS marker for location: ", location);
+                    var mabsMarker= addMedMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/MABS.png', 'medical');
+                    mabsMarker.setVisible(false); // Initially hide the marker
+                    mabsMarkers.push(mabsMarker);
+                }); 
+                
+                           // Load Garda locations
+                var ncbiLocations = JSON.parse('{!JSENCODE(ncbiAsJSON)}');
+                console.log("NCBI Locations: ", ncbiLocations);
+                ncbiLocations.forEach(function(location) {
+                    console.log("Adding NCBI marker for location: ", location);
+                    var ncbiMarker= addMedMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/NCBI.png', 'medical');
+                    ncbiMarker.setVisible(false); // Initially hide the marker
+                    ncbiMarkers.push(ncbiMarker);
+                });                 
+                
+                           // Load Garda locations
+                var wheelLocations = JSON.parse('{!JSENCODE(wheelAsJSON)}');
+                console.log("Wheel Locations: ", wheelLocations);
+                wheelLocations.forEach(function(location) {
+                    console.log("Adding Wheel marker for location: ", location);
+                    var wheelMarker= addMedMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/wheel.png', 'medical');
+                    wheelMarker.setVisible(false); // Initially hide the marker
+                    wheelMarkers.push(wheelMarker);
+                });   
+                
+                           // Load Garda locations
+                var nursingLocations = JSON.parse('{!JSENCODE(nursingAsJSON)}');
+                console.log("nursing Locations: ", nursingLocations);
+                nursingLocations.forEach(function(location) {
+                    console.log("Adding nursing marker for location: ", location);
+                    var nursingMarker= addMedMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/nursing.png', 'medical');
+                    nursingMarker.setVisible(false); // Initially hide the marker
+                    nursingMarkers.push(nursingMarker);
+                });                  
+                
+               // Re-add search input and combined legend to the map
+                map.controls[google.maps.ControlPosition.TOP_CENTER].push(document.getElementById('search-input'));
+                map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(document.getElementById('combinedLegend'));
+
+                // Listen for fullscreen changes and re-add elements when toggling fullscreen
+                document.addEventListener("fullscreenchange", handleFullScreenChange);
+                document.addEventListener("webkitfullscreenchange", handleFullScreenChange);
+                document.addEventListener("mozfullscreenchange", handleFullScreenChange);
+                document.addEventListener("MSFullscreenChange", handleFullScreenChange);             
+                
+                function handleFullScreenChange() {
+                    if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+                        map.controls[google.maps.ControlPosition.TOP_CENTER].push(document.getElementById('search-input'));
+                        map.controls[google.maps.ControlPosition.BOTTOM_RIGHT].push(document.getElementById('combinedLegend'));
+                    }
+                }           
+                 
+                
+// Initialize the Google Places Autocomplete search box
+                var input = document.getElementById('search-input');
+                autocomplete = new google.maps.places.Autocomplete(input);
+
+                // Bind the autocomplete to the map's viewport
+                autocomplete.bindTo('bounds', map);
+
+                // Listen for the place_changed event when a user selects a place
+                autocomplete.addListener('place_changed', function() {
+                    var place = autocomplete.getPlace();
+
+                    if (!place.geometry) {
+                        console.log("No details available for input: '" + place.name + "'");
+                        return;
+                    }
+
+                    // If the place has a geometry, center the map on the location
+                    if (place.geometry.viewport) {
+                        map.fitBounds(place.geometry.viewport);
+                    } else {
+                        map.setCenter(place.geometry.location);
+                        map.setZoom(15); // Zoom level for detailed view
+                    }
+
+                    // Place a marker at the selected place
+                    marker.setPosition(place.geometry.location);
+                    marker.setVisible(true);
+
+                    // Optionally, show information in the marker's info window
+                    var infoWindow = new google.maps.InfoWindow({
+                        content: '<div><strong>' + place.name + '</strong><br>' +
+                                 'Address: ' + place.formatted_address + '</div>'
+                    });
+                    infoWindow.open(map, marker);
+                });  
+                
+            }
+            
+            
+            
+//Handling CHN Data
+            
+            // Variable to store the previously selected CHN
+            let previousChn = null;
+
+            function chnResetAllOPMarkers(selectedChn) {
+                // Hide and clear ops markers
+                opsMarkers.forEach(function(marker) {
+                    marker.setMap(null);  // Remove marker from map
+                });
+                opsMarkers = [];  // Clear the array
+            
+                // Hide and clear optbm markers
+                optbmMarkers.forEach(function(marker) {
+                    marker.setMap(null);
+                });
+                optbmMarkers = [];
+            
+                // Hide and clear optbre markers
+                optbreMarkers.forEach(function(marker) {
+                    marker.setMap(null);
+                });
+                optbreMarkers = [];
+                
+                console.log("All markers cleared, setting new markers for chn.");
+            
+                // Example: Parsing opsLocations data again
+                var opsLocations = JSON.parse('{!JSENCODE(newOPACTAsJSON)}');
+                console.log("OPs Locations: ", opsLocations);
+            
+                // Filter locations based on CHN and create new markers
+                opsLocations.forEach(function(location) {
+                    // Check if the location's CHN matches the selected CHN
+                    if (String(location.CHN__c) === String(selectedChn)) {
+                        console.log("Adding OPs marker for location: ", location);
+                        var opsMarker = addMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/OPicon-active.png', 'ops');
+                        
+                        opsMarker.setVisible(false); // Initially hide the marker if necessary
+                        opsMarkers.push(opsMarker);
+                    } else {
+                        console.log("Skipping location due to CHN mismatch: ", location.CHN__c);
+                    }
+                });
+            
+                var optbmLocations = JSON.parse('{!JSENCODE(OPTBMAsJSON)}');
+                console.log("OPtbm Locations: ", optbmLocations);
+            
+                // Filter locations based on CHN and create new markers
+                optbmLocations.forEach(function(location) {
+                    // Check if the location's CHN matches the selected CHN
+                    if (String(location.CHN__c) === String(selectedChn)) {
+                        console.log("Adding OPs marker for location: ", location);
+                        var optbmMarker = addMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/OPicon.png', 'optbm');
+                        
+                        optbmMarker.setVisible(false); // Initially hide the marker if necessary
+                        optbmMarkers.push(optbmMarker);
+                    } else {
+                        console.log("Skipping location due to CHN mismatch: ", location.CHN__c);
+                    }
+                });
+                
+                var optbreLocations = JSON.parse('{!JSENCODE(OPTBREAsJSON)}');
+                console.log("OPtbre Locations: ", optbreLocations);
+            
+                // Filter locations based on CHN and create new markers
+                optbreLocations.forEach(function(location) {
+                    // Check if the location's CHN matches the selected CHN
+                    if (String(location.CHN__c) === String(selectedChn)) {
+                        console.log("Adding OPtbre marker for location: ", location);
+                        var optbreMarker = addMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/OPicon-re.png', 'optbre');
+                        
+                        optbreMarker.setVisible(false); // Initially hide the marker if necessary
+                        optbreMarkers.push(optbreMarker);
+                    } else {
+                        console.log("Skipping location due to CHN mismatch: ", location.CHN__c);
+                    }
+                });    
+            
+            }
+           
+    // JavaScript function to handle CHN selection change
+
+            function handleChnChange(selectedChn) {
+                if (selectedChn) {
+                    console.log('Selected CHN: ' + selectedChn);
+                    
+                    currentChn = selectedChn;
+                    
+                    toggleMarkers("ops", "chn");
+                    toggleMarkers("optbm", "chn");
+                    toggleMarkers("optbre", "chn");  
+                    
+                    chnResetAllOPMarkers(selectedChn);      
+            
+                    // Call the toggleCHN function with the selected CHN value
+                    const chnKey = 'chn' + selectedChn;
+            
+                    // If there was a previously selected CHN, toggle it off
+                    if (previousChn) {
+                        const previousChnKey = 'chn' + previousChn;
+                        toggleCHN(previousChnKey, false); // Hide the previously selected CHN
+                    }
+            
+                    // Toggle the new CHN on
+                    toggleCHN(chnKey, true);  // Pass 'true' to show the new CHN polygon
+            
+                    // Store the current CHN as the previous one for the next time
+                    previousChn = selectedChn;
+            
+                    // Fetch SC options from the Apex controller
+                    Visualforce.remoting.Manager.invokeAction(
+                        '{!$RemoteAction.MapController.getSCOptions}',
+                        selectedChn, // Passing the selected CHN value
+                        function (result, event) {
+                            if (event.status) {
+                                console.log("SC options received: ", result); // Log the whole result
+                                // Clear the SC dropdown
+                                var scDropdown = document.getElementById('scDropdown');
+                                scDropdown.innerHTML = '';  // Clear previous options
+            
+                                // Add default option
+                                var defaultOption = document.createElement('option');
+                                defaultOption.value = '';
+                                defaultOption.text = 'Select SC';
+                                scDropdown.appendChild(defaultOption);
+                                // Add new options to the SC dropdown
+                                // Add new options to the SC dropdown
+                                // Add new options to the SC dropdown
+                                result.forEach(function (option) {
+                                    console.log("Processing option: ", option); // Log each option in the result
+                                
+                                    // Check if the option is not an empty string
+                                    if (option && option !== "") {
+                                        var newOption = document.createElement('option');
+                                        newOption.value = option;  // Use the string as both the value and the label
+                                        newOption.text = option;   // Use the string as the label as well
+                                        console.log("Adding to dropdown: value = " + newOption.value + ", label = " + newOption.text);
+                                        scDropdown.appendChild(newOption);  // Append valid options to the dropdown
+                                    } else {
+                                        console.warn("Skipping invalid option: ", option);  // Log the invalid option (like an empty string)
+                                    }
+                                });
+                                
+                                
+            
+            
+                                // Show the SC dropdown
+                                scDropdown.style.display = 'block';
+                            } else {
+                                console.error('Error fetching SC options: ' + event.message);
+                            }
+                        }
+                    );
+                } else {
+                    // Hide SC dropdown if no CHN is selected
+                    document.getElementById('scDropdown').style.display = 'none';
+                }
+            }
+
+            
+            // Function to toggle CHN visibility (show or hide based on the 'show' flag)
+            function toggleCHN(chn, show) {
+                console.log("Toggling CHN: " + chn + " to " + (show ? "show" : "hide"));
+                if (chn && chnPolygons[chn]) {
+                    if (show) {
+                        chnPolygons[chn].setMap(map);   // Show the polygon
+                    } else {
+                        chnPolygons[chn].setMap(null);  // Hide the polygon
+                    }
+                } else {
+                    console.error("CHN Polygon not found for: " + chn);
+                }
+            }
+
+            var chnToScMap = {};  // This will hold CHN and SC data from Apex
+            
+            
+//SC Dropdown
+
+            function scResetAllOPMarkers(selectedSC, CHN) {
+                // Hide and clear ops markers
+                opsMarkers.forEach(function(marker) {
+                    marker.setMap(null);  // Remove marker from map
+                });
+                opsMarkers = [];  // Clear the array
+            
+                // Hide and clear optbm markers
+                optbmMarkers.forEach(function(marker) {
+                    marker.setMap(null);
+                });
+                optbmMarkers = [];
+            
+                // Hide and clear optbre markers
+                optbreMarkers.forEach(function(marker) {
+                    marker.setMap(null);
+                });
+                optbreMarkers = [];
+                
+                console.log("All markers cleared, setting new markers for SC.");
+            
+                // Example: Parsing opsLocations data again
+                var opsLocations = JSON.parse('{!JSENCODE(newOPACTAsJSON)}');
+                console.log("OPs Locations: ", opsLocations);
+            
+                // Filter locations based on CHN and create new markers
+                opsLocations.forEach(function(location) {
+                    // Check if the location's CHN matches the selected CHN
+                    if (String(location.SC__c) === String(selectedSC) && String(location.CHN__c) === String(CHN)) {
+                        console.log("Adding SCs OP marker for location: ", location);
+                        var opsMarker = addMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/OPicon-active.png', 'ops');
+                        
+                        opsMarker.setVisible(false); // Initially hide the marker if necessary
+                        opsMarkers.push(opsMarker);
+                    } else {
+                        console.log("Skipping location due to SC mismatch: ", location.SC__c);
+                    }
+                });
+            
+                var optbmLocations = JSON.parse('{!JSENCODE(OPTBMAsJSON)}');
+                console.log("OPtbm Locations: ", optbmLocations);
+            
+                // Filter locations based on CHN and create new markers
+                optbmLocations.forEach(function(location) {
+                    // Check if the location's CHN matches the selected CHN
+                    if (String(location.SC__c) === String(selectedSC) && String(location.CHN__c) === String(CHN)) {
+                        console.log("Adding OPs marker for location: ", location);
+                        var optbmMarker = addMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/OPicon.png', 'optbm');
+                        
+                        optbmMarker.setVisible(false); // Initially hide the marker if necessary
+                        optbmMarkers.push(optbmMarker);
+                    } else {
+                        console.log("Skipping location due to SC mismatch: ", location.SC__c);
+                    }
+                });
+                
+                var optbreLocations = JSON.parse('{!JSENCODE(OPTBREAsJSON)}');
+                console.log("OPtbre Locations: ", optbreLocations);
+            
+                // Filter locations based on CHN and create new markers
+                optbreLocations.forEach(function(location) {
+                    // Check if the location's CHN matches the selected CHN
+                    if (String(location.SC__c) === String(selectedSC) && String(location.CHN__c) === String(CHN)) {
+                        console.log("Adding OPtbre marker for location: ", location);
+                        var optbreMarker = addMarker(location, 'https://stefandodds.ie/serv-dir/libs/icons/OPicon-re.png', 'optbre');
+                        
+                        optbreMarker.setVisible(false); // Initially hide the marker if necessary
+                        optbreMarkers.push(optbreMarker);
+                    } else {
+                        console.log("Skipping location due to SC mismatch: ", location.SC__c);
+                    }
+                });    
+            
+            }
+            // JavaScript function to handle SC selection change
+            function handleScChange(selectedSc) {
+                if (selectedSc) {
+                    toggleMarkers("ops", "chn");
+                    toggleMarkers("optbm", "chn");
+                    toggleMarkers("optbre", "chn"); 
+                    scResetAllOPMarkers(selectedSc, currentChn);
+                } else {
+                    console.log('No SC selected.');
+                }
+            }
+           
+
+// Helper function to decode HTML entities in the text
+            function decodeHtmlEntities(text) {
+                var textArea = document.createElement('textarea');
+                textArea.innerHTML = text;
+                return textArea.value;
+            }
+
+// Custom CSV parsing function with special handling for the 6th field (Address)
+            function parseCustomCSVLine(line) {
+                var decodedLine = decodeHtmlEntities(line);  // Decode &quot; to " and any other entities
+                var fields = [];
+                var insideQuotes = false;
+                var currentField = '';
+                var commaCount = 0;
+            
+                for (var i = 0; i < decodedLine.length; i++) {
+                    var char = decodedLine[i];
+            
+                    // Handle the special case for the 6th field (Address) with quotes
+                    if (commaCount === 5 && char === '"' && !insideQuotes) {
+                        insideQuotes = true;  // We've entered the quoted section (address)
+                    } else if (insideQuotes && char === '"') {
+                        // We've reached the end of the quoted address field
+                        insideQuotes = false;
+                        fields.push(currentField.trim());  // Push the address field
+                        currentField = '';
+                        commaCount++;  // Increment the comma count after the address field
+                    } else if (char === ',' && !insideQuotes) {
+                        // Handle commas normally as field delimiters
+                        fields.push(currentField.trim());
+                        currentField = '';
+                        commaCount++;  // Keep track of how many fields we've processed
+                    } else {
+                        // Append the character to the current field
+                        currentField += char;
+                    }
+                }
+            
+                // Push the last field if not empty
+                if (currentField) {
+                    fields.push(currentField.trim());
+                }
+            
+                return fields;
+            }
+
+
+//gps data
+            function fetchGPSLocations() {
+                console.log('Fetching GPS locations...');
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.MapController.getGPSLocationsAsJSON}',
+                    function(result, event) {
+                        console.log('GPS data fetched:', result);
+                        if (event.status && result && result !== 'Error fetching GPS data') {
+                            console.log('GPS data fetched:', result);
+            
+                            // Split the result into lines and process each line individually
+                            var lines = result.split('\n');
+                            
+                            // Set markerType to "gps"
+                            var markerType = "gps";
+            
+                            lines.forEach(function(line) {
+                                // Parse each line using the custom CSV parsing function
+                                var fields = parseCustomCSVLine(line);
+            
+                                // Now, use the correct fields based on the structure of your data
+                                var lat = parseFloat(fields[0]);
+                                var lng = parseFloat(fields[1]);
+                                var name = decodeHtmlEntities(fields[3]);
+                                var healthLinkId = fields[4];
+                                var address = decodeHtmlEntities(fields[5]);
+            
+                                // If the 7th field is empty, treat the 8th field as the phone number
+                                var phone = fields[7].trim() ? fields[7] : fields[6];
+                                var fax = fields[7] && fields[6] !== phone ? fields[6] : 'N/A';
+                                var email = decodeHtmlEntities(fields[8]);
+                                var email2 = decodeHtmlEntities(fields[9]);
+            
+                                // Check if the phone field has multiple numbers (common in medical centers)
+                                if (phone && phone.split(' ').length > 1) {
+                                    phone = phone.split(' ').join(' ');  // Concatenate all numbers properly
+                                }
+            
+                                if (!isNaN(lat) && !isNaN(lng)) {
+                                    var latLng = { lat: lat, lng: lng };
+            
+                                    console.log('Adding GPS marker for location:', name);
+            
+                                    var marker = new google.maps.Marker({
+                                        position: latLng,
+                                        map: map,
+                                        title: name,
+                                        icon: {
+                                            url: 'https://stefandodds.ie/serv-dir/libs/icons/GP-icon.png',
+                                            scaledSize: new google.maps.Size(30, 40)
+                                        }
+                                    });
+            
+                                    marker.setVisible(false);
+            
+                                    // Build dynamic content for InfoWindow with enhanced styling and GPS markerType
+                                    var infoWindowContent = `
+                                        <div class="infowindow ${markerType}">
+                                            <h4>${name}</h4>
+                                            <p><strong>Healthlink ID:</strong> ${healthLinkId || 'N/A'}</p>
+                                            <p><strong>Address:</strong> ${address || 'N/A'}</p>
+                                            <p><strong>Phone:</strong> ${phone || 'N/A'}</p>
+                                            <p><strong>Fax:</strong> ${fax}</p>
+                                            <p><strong>Email:</strong> <a href="mailto:${email}">${email || 'N/A'}</a></p>
+                                            <p><strong>Email2:</strong> <a href="mailto:${email2}">${email2 || 'N/A'}</a></p>
+                                        </div>
+                                    `;
+            
+                                    var infoWindow = new google.maps.InfoWindow({
+                                        content: infoWindowContent
+                                    });
+            
+                                    // Add click event to open the InfoWindow
+                                    marker.addListener('click', function() {
+                                        infoWindow.open(map, marker);
+                                    });
+            
+                                    // Push marker to the array for later visibility toggling
+                                    gpsMarkers.push(marker);
+                                } else {
+                                    console.warn('Invalid GPS coordinates for location:', name);
+                                }
+                            });
+                        } else {
+                            console.error('Error fetching or parsing GPS data:', result);
+                        }
+                    }
+                );
+            }
+            
+// Dentists Data
+            function fetchDentistLocations() {
+                console.log('Fetching Dentist locations...');
+                Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.MapController.getDentistLocationsAsJSON}',
+                    function(result, event) {
+                        if (event.status && result && result !== 'Error fetching Dentist data') {
+                            console.log('Dentist data fetched:', result);
+            
+                            Papa.parse(result, {
+                                header: true,
+                                skipEmptyLines: true,
+                                beforeFirstChunk: function(chunk) {
+                                    const firstChar = chunk.charCodeAt(0);
+                                    if (firstChar === 0xFEFF) {
+                                        chunk = chunk.slice(1);
+                                    }
+                                    return chunk;
+                                },
+                                complete: function(results) {
+                                    var data = results.data;
+                                    console.log('Parsed Dentist locations:', data);
+            
+                                    data.forEach(function(location) {
+                                        if (location.Latitude && location.Longitude) {
+                                            var lat = parseFloat(location.Latitude);
+                                            var lng = parseFloat(location.Longitude);
+            
+                                            if (!isNaN(lat) && !isNaN(lng)) {
+                                                var latLng = { lat: lat, lng: lng };
+            
+                                                console.log('Adding Dentist marker for location:', location);
+            
+                                                var marker = new google.maps.Marker({
+                                                    position: latLng,
+                                                    map: map,
+                                                    title: location.Name,
+                                                    icon: {
+                                                        url: 'https://stefandodds.ie/serv-dir/libs/icons/dentist.png',
+                                                        scaledSize: new google.maps.Size(30, 40)
+                                                    }
+                                                });
+            
+                                                marker.setVisible(false);
+            
+                                                var infoWindow = new google.maps.InfoWindow({
+                                                    content: `<div><strong>${location.Name}</strong><br>
+                                                             Address: ${location.Address}<br>
+                                                             Latitude: ${location.Latitude}<br>
+                                                             Longitude: ${location.Longitude}</div>`
+                                                });
+            
+                                                marker.addListener('click', function() {
+                                                    infoWindow.open(map, marker);
+                                                });
+            
+                                                dentistMarkers.push(marker);
+                                            } else {
+                                                console.warn('Invalid Dentist coordinates for location:', location);
+                                            }
+                                        } else {
+                                            console.warn('Invalid Dentist location:', location);
+                                        }
+                                    });
+                                }
+                            });
+                        } else {
+                            console.error('Error fetching or parsing Dentist data:', result);
+                        }
+                    }
+                );
+            }
+            
+
+//On load
+            window.onload = function() {
+                initMap();   
+                
+                // Wait for the map to be fully loaded (idle state) before fetching locations
+                google.maps.event.addListenerOnce(map, 'idle', function() {
+                    console.log('Map is fully loaded and idle.');
+            
+                    // Now start fetching GPS and Dentist locations
+                    console.log('Fetching GPS locations...');
+                    fetchGPSLocations();
+            
+                    console.log('Fetching Dentist locations...');
+                    fetchDentistLocations();
+                    
+                    console.log("Map initialized: ", map);
+                });                        
+            };
+        </script>
+</apex:page>
